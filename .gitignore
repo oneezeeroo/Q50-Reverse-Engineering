@@ -1,0 +1,16 @@
+# Local research material
+firmware/
+dumps/
+decompiled/
+private/
+keys/
+*.img
+*.bin
+*.epk
+*.apk
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
