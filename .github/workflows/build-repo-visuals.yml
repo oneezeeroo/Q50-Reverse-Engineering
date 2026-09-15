@@ -1,0 +1,40 @@
+name: Build repository visuals
+
+on:
+  push:
+    branches:
+      - asset-upload-tmp
+    paths:
+      - ".asset-tmp/**"
+      - ".github/workflows/build-repo-visuals.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: asset-upload-tmp
+
+      - name: Decode image assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          cat .asset-tmp/banner.* | base64 --decode > assets/q50-reverse-engineering.webp
+          cat .asset-tmp/architecture.* | base64 --decode > assets/q50-ivi-architecture.webp
+          test "$(stat -c%s assets/q50-reverse-engineering.webp)" -gt 20000
+          test "$(stat -c%s assets/q50-ivi-architecture.webp)" -gt 40000
+          rm -rf .asset-tmp
+
+      - name: Commit decoded assets
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "assets: add project visuals [skip ci]"
+          git push origin asset-upload-tmp
