@@ -6,6 +6,10 @@ The important part for this project is that the Android environment does not beh
 
 I am still tracing which responsibilities sit on each side of the system, so this page is a working map rather than a finished architecture diagram.
 
+![Q50 IVI architecture overview](../assets/q50-ivi-architecture.webp)
+
+The diagram shows my current working model based on the findings documented so far. Some component boundaries and parts of the install flow still need to be confirmed against the recovered software and hardware behavior.
+
 ## Android-side findings
 
 The decompiled software contains a package named:
