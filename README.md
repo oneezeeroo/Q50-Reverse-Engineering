@@ -1,5 +1,9 @@
 # Q50 Reverse Engineering
 
+<p align="center">
+  <img src="assets/q50-reverse-engineering.webp" alt="Q50 Reverse Engineering project banner" width="100%">
+</p>
+
 This repository documents my work reverse engineering the Infiniti Q50 infotainment system. I started with a simple question: how does this system actually package, verify, and install its applications?
 
 That turned into a deeper look at the IVI software, the EPK package format, and the path an application appears to take before it reaches the infotainment unit.
@@ -46,6 +50,10 @@ Once the format is understood well enough, the next step is to build small tools
 ## Repository layout
 
 ```text
+assets/
+  q50-reverse-engineering.webp
+  q50-ivi-architecture.webp
+
 docs/
   architecture.md
   epk-format.md
