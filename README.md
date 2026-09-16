@@ -32,6 +32,7 @@ So far I have confirmed that:
 - [EPK format notes](docs/epk-format.md)
 - [Custom app notes](docs/custom-app-notes.md)
 - [Vehicle sensor map](docs/sensor-map.md)
+- [Minimal Q50 app example](examples/q50-rpm-test/README.md)
 - [Research log](docs/research-log.md)
 
 ## Tooling
