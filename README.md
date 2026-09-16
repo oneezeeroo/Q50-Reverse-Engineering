@@ -4,72 +4,82 @@
   <img src="assets/q50-reverse-engineering.webp" alt="Q50 Reverse Engineering project banner" width="100%">
 </p>
 
-This repository documents my work reverse engineering the Infiniti Q50 infotainment system. I started with a simple question: how does this system actually package, verify, and install its applications?
+This repo is my ongoing reverse engineering work on the Infiniti Q50 infotainment system.
 
-That turned into a deeper look at the IVI software, the EPK package format, and the path an application appears to take before it reaches the infotainment unit.
+I started looking into it because I wanted to understand how the factory system handles apps, what the `.epk` format actually is, and whether a normal person could build something that runs on the stock unit without replacing the whole infotainment system.
 
-The project is still early. I am documenting each useful finding as I go instead of waiting until everything is finished.
+That turned into a much bigger rabbit hole: the Android/Linux layout, AppsManager, EPK parsing, IVI metadata, app installation, and the vehicle sensor interface.
 
-## What I have found so far
+The goal here is not to dump proprietary files or hand out everything needed to blindly copy the work. I want this repo to give people a real technical starting point, while still leaving enough work that you need to understand what you're doing.
 
-The Q50 infotainment platform appears to use a hybrid setup with a Linux side and a heavily modified Android 2.3 environment. The Android side is old enough that normal modern Android assumptions do not always apply, and a lot of the application handling appears to be custom to the IVI platform.
+## What I have confirmed
 
-One of the more useful findings so far is the EPK handling code. Decompiled classes under `com.connexis.ivi.utils.epk` show a dedicated parser and data structures for EPK packages.
+So far I have confirmed that:
 
-The parser exposes an envelope structure containing fields such as:
+- the Q50 infotainment image contains a Linux side and a modified Android environment
+- the Android side includes Connexis/YGOMI IVI components
+- AppsManager watches removable media and handles EPK packages
+- the EPK v2 envelope and file-block structure can be reproduced
+- a known working third-party EPK could be parsed and its APK recovered
+- that working APK targets Android API 10 and uses a normal launcher activity
+- the stock HomeScreen reads IVI-specific application metadata
+- the working third-party app uses Android's normal `SensorManager` API for vehicle data
+- RPM, temperatures, speed, throttle, torque, G-force, gear, power and TPMS sensor IDs can be mapped from that app
 
-- magic code
-- version
-- payload type
-- block count
-- key size
-- a 256-byte key buffer
+## Start here
 
-That gives a starting point for working out how EPK files are structured and what the installer expects before accepting a package.
+- [IVI architecture](docs/architecture.md)
+- [EPK format notes](docs/epk-format.md)
+- [Custom app notes](docs/custom-app-notes.md)
+- [Vehicle sensor map](docs/sensor-map.md)
+- [Research log](docs/research-log.md)
 
-My current working path is:
+## Tooling
 
-```text
-APK
-  -> EPK packaging
-  -> signing / verification
-  -> USB manager
-  -> IVI installation
-```
-
-I have not treated that flow as final yet. Part of this project is tracing each step in the code and confirming what actually happens on the hardware.
-
-## What I am working on
-
-The current focus is on understanding the EPK format well enough to reproduce the packaging process.
-
-That means tracing the parser, finding where signatures or keys are checked, following references into the USB manager, and separating the Android-side logic from anything handled by the Linux side.
-
-Once the format is understood well enough, the next step is to build small tools for inspecting and eventually creating test packages.
-
-## Repository layout
+There is now a small read-only EPK inspector in:
 
 ```text
-assets/
-  q50-reverse-engineering.webp
-  q50-ivi-architecture.webp
-
-docs/
-  architecture.md
-  epk-format.md
-  research-log.md
+tools/epk_inspect.py
 ```
 
-More code and tooling will be added as the format becomes clearer.
+It prints the EPK version, payload type, block count, wrapped-key length, filenames, encrypted lengths, and offsets.
 
-## Project scope
+I am intentionally not publishing Infiniti firmware, recovered APKs, private keys, passwords, or device-specific key material. If you want to reproduce the deeper parts of this work, you will still need to obtain and analyze software from hardware or firmware you are authorized to test.
 
-This repository is for research and documentation of hardware and software I am authorized to test.
+## Current working model
 
-I am not uploading the original Infiniti firmware, full decompiled source trees, private signing material, VIN data, or other proprietary vehicle data. The goal is to document the behavior I can verify and publish my own notes and tooling around it.
+```text
+custom APK
+   |
+   v
+EPK package
+   |
+   v
+USB / AppsManager
+   |
+   v
+IVI package manager
+   |
+   v
+installed Android app
+   |
+   v
+Android SensorManager
+   |
+   v
+vehicle data
+```
+
+There are still open questions, especially around firmware-version differences, install-policy checks, and whether every Q50 software revision exposes the exact same vehicle sensor map.
+
+## Scope
+
+This repository is for interoperability and reverse-engineering research on hardware and software I am authorized to test.
+
+I am not uploading original Infiniti firmware, complete proprietary source trees, recovered third-party APKs, private keys, VIN data, or other sensitive vehicle data.
 
 See [DISCLAIMER.md](DISCLAIMER.md) for more information.
 
-## Status
+---
 
-Early research. The notes here will change as I confirm more of the install path and test findings against actual hardware.
+**Project note:** Agentic AI was used as a research and editing assistant during parts of this project.
