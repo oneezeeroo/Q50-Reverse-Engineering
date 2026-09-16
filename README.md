@@ -12,6 +12,27 @@ That turned into a much bigger rabbit hole: the Android/Linux layout, AppsManage
 
 The goal here is not to dump proprietary files or hand out everything needed to blindly copy the work. I want this repo to give people a real technical starting point, while still leaving enough work that you need to understand what you're doing.
 
+## Want to build an app for your Q50?
+
+I added a very small example app that shows the basic structure of a Q50-compatible Android app and how a working third-party app like Red Sport talks to vehicle data.
+
+**Start here:** [Minimal Q50 RPM app example](examples/q50-rpm-test/README.md)
+
+The example shows:
+
+- API 10 compatibility
+- IVI metadata in `AndroidManifest.xml`
+- a normal Android `MAIN` / `LAUNCHER` activity
+- the `IVI_CAN_READ` permission
+- Android `SensorManager`
+- reading RPM from the observed vehicle sensor type
+
+It is intentionally simple.
+
+**Important:** the source code in that folder is not something you can just copy to a USB drive and install on the car. There are still separate build, APK signing, EPK packaging, compatibility, and install-path steps that you need to understand first.
+
+The rest of this repo documents the pieces I have confirmed so far. Read the EPK notes, custom app notes, and disclaimer before experimenting on real hardware.
+
 ## What I have confirmed
 
 So far I have confirmed that:
@@ -76,6 +97,8 @@ There are still open questions, especially around firmware-version differences, 
 ## Scope
 
 This repository is for interoperability and reverse-engineering research on hardware and software I am authorized to test.
+
+**Do not treat the sample app as a ready-to-install package.** Automotive infotainment systems are real embedded systems, and a bad package or incompatible software can leave a unit unstable or unusable. Only test on hardware you own or have permission to work on, and make sure you understand the packaging and install process before trying anything on the car.
 
 I am not uploading original Infiniti firmware, complete proprietary source trees, recovered third-party APKs, private keys, VIN data, or other sensitive vehicle data.
 
