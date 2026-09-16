@@ -1,62 +1,113 @@
 # EPK format notes
 
-EPK appears to be the package format used by the IVI software for application or payload delivery.
+EPK is the package format handled by the Q50 IVI application-management stack.
 
-The most useful code I have found so far is the parser implementation under:
+The relevant framework code includes:
 
 ```text
+com.connexis.ivi.utils.epk
+com.connexis.ivi.utils.epk.v1
 com.connexis.ivi.utils.epk.v2
+com.connexis.ivi.utils.epk.v2_2
+com.connexis.ivi.utils.epk.v2_3
 ```
 
-One parsed result can contain multiple EPK entries. Each entry contains an envelope and a payload.
+The generic wrapper checks the version and routes parsing to the matching implementation.
 
-A simplified view of the structure is:
+## EPK v2 envelope
+
+The v2 parser and builder make the outer structure fairly clear:
+
+| Offset | Size | Field |
+| ---: | ---: | --- |
+| 0x00 | 4 | ASCII magic `.epk` |
+| 0x04 | 2 | version |
+| 0x06 | 2 | payload type |
+| 0x08 | 2 | block count |
+| 0x0A | 2 | wrapped-key length |
+| 0x0C | 256 | wrapped-key field |
+
+That puts the fixed envelope size at 268 bytes.
+
+The implementation uses Java data streams, so the numeric fields are big-endian.
+
+## Payload blocks
+
+Each file block is stored as:
 
 ```text
-EpkParseResult
-  entries[]
-    EpkEntry
-      Envelope
-      Payload
+128 bytes   filename
+4 bytes     encrypted payload length
+N bytes     encrypted file data
 ```
 
-## Envelope fields
+The filename is stored as ASCII in a fixed-width field with zero padding.
 
-The decompiled `EpkParseResult.EpkEntry.Envelope` class exposes these fields:
+## Encryption model
+
+The v2 code uses hybrid encryption.
+
+At a high level:
 
 ```text
-magic_code
-version
-payload_type
-block_count
-key_size
-key[256]
+temporary symmetric key
+        |
+        +--> wrapped with RSA
+        |
+        +--> used for AES-CBC payload encryption
 ```
 
-The class stores the key buffer as a fixed 256-byte array.
+The important point is that an EPK is not just a renamed ZIP file.
 
-At this stage, I am treating these as parser-level fields only. Their exact byte offsets and serialization order still need to be confirmed from the code that reads the package.
+Device-specific key material is not included in this repo.
 
-## What these fields may tell us
+APK signing is also separate from the EPK encryption layer. The working third-party APK I examined had a normal Android APK signature.
 
-`magic_code` should help identify the beginning of an EPK structure or confirm that the parser received the expected format.
+## Payload type
 
-`version` suggests the package format has changed over time. The presence of a `v2` parser package supports that idea, but the exact differences between versions still need to be traced.
+The full meaning of every numeric payload type is still not mapped.
 
-`payload_type` likely tells the installer how to interpret the payload. I have not mapped the numeric values yet.
+One known working community package was observed with:
 
-`block_count` suggests the payload may be processed in blocks rather than as one continuous object.
+```text
+version      = 2
+payload type = 2
+block count  = 1
+payload      = APK
+```
 
-`key_size` and the 256-byte `key` buffer are especially interesting because they may be related to package verification, encryption, signatures, or another key-based operation. I have not assigned a purpose to them yet because the surrounding code still needs to be followed.
+That proves payload type 2 is used by at least one real custom application package, but I am not treating that as proof that "2 = APK" in every case.
 
-## Current goal
+The v2 parser separates DRM files from normal data by filename. Files ending in `.drm`, plus names such as `drm.properties` and `drm.json`, are treated as DRM data.
 
-The next step is to find the code that fills the envelope fields from raw bytes.
+## USB install path
 
-That should let me answer three important questions:
+The Android-side flow I have traced so far looks like this:
 
-1. What is the exact EPK header layout?
-2. Where does the payload begin?
-3. How are keys or signatures used during parsing and installation?
+```text
+USB mounted
+   |
+   v
+AppsManager / USBService
+   |
+   v
+EPK found and parsed
+   |
+   v
+normal data file extracted
+   |
+   v
+APK passed to the IVI package manager
+```
 
-Once those are known, it should be possible to write a small standalone EPK inspection tool and compare its output with the IVI parser.
+There are still parts of the install path I want to verify on hardware, but this is enough to start reproducing the package flow in a controlled way.
+
+## Public tool
+
+The repo includes a read-only inspector:
+
+```text
+tools/epk_inspect.py
+```
+
+It does not decrypt payloads and does not contain device keys.
