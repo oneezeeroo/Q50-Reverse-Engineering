@@ -1,36 +1,29 @@
 # IVI architecture notes
 
-My current model of the Q50 infotainment system is a hybrid platform with a Linux side doing much of the system-level work and a heavily modified Android 2.3 environment handling part of the application layer.
+The current working model of the Q50 infotainment system is a hybrid platform: a Linux-oriented side handles much of the system-level work while a heavily modified Android 2.3 environment handles applications and IVI-facing services.
 
-The important part for this project is that the Android environment does not behave like a normal consumer Android device. The application format, install path, and supporting services appear to be specific to the IVI platform.
-
-I am still tracing which responsibilities sit on each side of the system, so this page is a working map rather than a finished architecture diagram.
+The Android environment does not behave like a normal consumer Android device. Its application format, install path, and supporting services appear to be shaped by the IVI platform rather than by the standard Android package-install workflow.
 
 ![Q50 IVI architecture overview](../assets/q50-ivi-architecture.webp)
 
-The diagram shows my current working model based on the findings documented so far. Some component boundaries and parts of the install flow still need to be confirmed against the recovered software and hardware behavior.
+The diagram is a working model derived from the findings documented in this repository. Component boundaries and parts of the install flow still need confirmation against additional software and hardware observations.
 
 ## Android-side findings
 
-The decompiled software contains a package named:
+The decompiled software contains the following package families:
 
 ```text
 com.connexis.ivi.utils.epk
-```
-
-There is also a versioned package:
-
-```text
 com.connexis.ivi.utils.epk.v2
+com.connexis.ivi.utils.epk.v2_2
+com.connexis.ivi.utils.epk.v2_3
 ```
 
-That code contains classes for parsing EPK packages and representing parsed entries, envelopes, and payloads.
-
-This is useful because it shows that EPK handling is built into the IVI software rather than being a generic Android APK install path.
+These classes parse EPK packages and represent entries, envelopes, and payloads. This supports the conclusion that EPK handling is built into the IVI application-management software rather than being a generic Android APK install path.
 
 ## Working install model
 
-The install path I am tracing currently looks like this:
+The install path currently being traced is:
 
 ```text
 Application APK
@@ -48,16 +41,22 @@ USB manager
 IVI install process
 ```
 
-The exact boundary between Android and Linux is still being worked out. I do not want to label a step as Android-side or Linux-side until the code or hardware behavior confirms it.
+The exact boundary between Android and Linux is intentionally left open until code or hardware behavior confirms it.
 
-## Questions still open
+## What this proves
 
-- Which component creates the final EPK file?
-- What is signed, and where is the signature checked?
-- What does the 256-byte key field represent?
-- Which service receives an EPK from the USB manager?
-- Does Linux perform any verification before Android sees the package?
-- What payload types are supported?
-- Are different EPK versions handled by separate parsers?
+- EPK parsing is represented in the IVI software stack.
+- The system has a package-management path distinct from simply copying an APK to removable media.
+- The observed architecture is consistent with separate application, packaging, USB-management, and installation stages.
 
-These are the areas I am tracing next.
+## What is still unknown
+
+- Which component creates the final EPK file.
+- What is signed, and where the signature is checked.
+- What the 256-byte key field represents for each package variant.
+- Which service receives an EPK from the USB manager.
+- Whether Linux performs verification before Android receives the package.
+- Which payload types are supported across software revisions.
+- Whether the versioned EPK parsers have materially different behavior.
+
+This page is a working map, not a claim of a complete platform architecture.
