@@ -1,69 +1,97 @@
 # Research log
 
-This page is my running record of the reverse engineering work. I am keeping it organized by what I investigated instead of by date.
+This is my running record of the project, grouped by what I investigated instead of by date.
 
 ## Getting a usable picture of the system
 
-The first problem was figuring out what kind of platform I was dealing with.
+The first problem was figuring out what kind of platform I was actually dealing with.
 
-The Q50 IVI is not a normal Android head unit. My current understanding is that it uses a Linux-based system alongside a heavily modified Android 2.3 environment. That matters because installing an app is not as simple as copying over an APK and calling the normal Android package manager.
+The Q50 IVI is not a normal Android head unit. The recovered image shows a Linux-oriented side and a modified Android environment. The Android side contains the apps and a lot of the IVI-facing code, while other system work appears to happen outside of it.
 
-From there, I started looking for the code responsible for whatever package format the system actually expects.
+Once that was clear, I stopped treating the system like a normal phone or tablet and started following the Q50-specific install path instead.
 
 ## Finding the EPK code
 
-Searching through the decompiled software led me to the EPK utilities.
-
-The package names immediately stood out:
+The first major lead was the Connexis EPK code:
 
 ```text
 com.connexis.ivi.utils.epk
+com.connexis.ivi.utils.epk.v1
 com.connexis.ivi.utils.epk.v2
+com.connexis.ivi.utils.epk.v2_2
+com.connexis.ivi.utils.epk.v2_3
 ```
 
-The `v2` code includes an `EpkParseResult` class with a list of parsed entries. Each entry contains an envelope and a payload.
+From there I traced the parser, version handling, envelope fields, payload blocks, encryption helpers, and the AppsManager USB path.
 
-That was the first point where the package format started to become concrete instead of just being a name.
+## Mapping EPK v2
 
-## Breaking down the envelope
-
-The envelope object contains:
+The v2 envelope contains:
 
 ```text
-m_magicCode
-m_version
-m_payloadType
-m_blockCount
-m_keySize
-m_key[256]
+magic
+version
+payload type
+block count
+wrapped-key length
+256-byte wrapped-key field
 ```
 
-This gave me a short list of fields to trace backwards into the parser.
+Each payload block then stores a fixed-width filename, encrypted length, and encrypted file data.
 
-The fixed 256-byte key buffer is one of the parts I want to understand before making assumptions about signing or encryption. The code shows that the field exists, but that alone does not tell me whether it stores a public key, signature-related data, encrypted material, or something else.
+The implementation uses RSA for wrapping a temporary symmetric key and AES-CBC for file payloads.
 
-## Building the install path
+I wrote a small independent parser to make sure the format could be reproduced outside of the original code.
 
-The bigger goal is to understand how an application gets from an APK into something the car will accept.
+## Testing against a real working package
 
-The path I am currently tracing is:
+The next step was using a known working community EPK as a reference instead of relying only on decompiled factory code.
+
+That package parsed as:
 
 ```text
-APK
-  -> EPK packaging
-  -> signing / verification
-  -> USB manager
-  -> IVI installation
+EPK version: 2
+payload type: 2
+block count: 1
+payload: APK
 ```
 
-The useful part about finding the parser is that I now have somewhere concrete to work from. Instead of searching the whole codebase for anything related to installation, I can follow the EPK classes outward and see what creates them, what consumes them, and what checks happen in between.
+Recovering the APK gave me a real example of what a custom Q50 app looks like.
 
-## Where the research is now
+## What the working APK showed
 
-The main unknowns are still the important ones.
+The app targets API 10, uses a normal `MAIN` / `LAUNCHER` activity, and does not request the Android system UID.
 
-I need to find the code that reads the raw EPK bytes, map the header layout, identify the supported payload types, and trace how the key field is used.
+It includes IVI-specific metadata, and the stock HomeScreen code was observed reading at least one of those values directly.
 
-After that, I want to follow the same package through the USB manager and into the install routine. That should make it possible to separate the packaging step from the verification step and eventually reproduce the format with my own tooling.
+The APK is also signed like a normal third-party Android application rather than an obvious OEM system package.
 
-I am keeping the repo focused on findings I can trace back to code or hardware behavior. Anything that is still a guess stays labeled as one.
+## Vehicle data
+
+The biggest app-side finding was how the reference dashboard reads the car.
+
+It does not parse raw CAN frames itself.
+
+Instead it uses:
+
+```text
+SensorManager
+  -> getSensorList(...)
+  -> registerListener(...)
+  -> onSensorChanged(...)
+  -> SensorEvent.values[]
+```
+
+From there I was able to map a useful group of vehicle sensor IDs, including RPM, coolant, oil temperature, oil pressure, speed, throttle, G-force, gear, power, and TPMS.
+
+Those mappings are documented in [sensor-map.md](sensor-map.md).
+
+## Next practical test
+
+The next step is to build a very small API-10-compatible app that does three things:
+
+1. installs through the same EPK/USB path,
+2. appears correctly in the IVI launcher,
+3. reads a few live sensors.
+
+The first build will stay simple on purpose. I want to prove install, launch, and data access before spending time on UI or extra features.
