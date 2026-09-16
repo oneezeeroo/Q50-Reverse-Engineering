@@ -1,4 +1,4 @@
-# Custom app notes
+# Red-Sport/GTR app notes
 
 A known working third-party Q50 application was unpacked from a working EPK and used as a reference.
 
