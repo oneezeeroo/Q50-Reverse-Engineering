@@ -74,6 +74,25 @@ These findings describe the samples and software revisions examined. They are no
 - Which Android permissions and sensor indexes are required in practice.
 - The final Linux/Android boundary and hardware behavior of the USB install flow.
 
+## Next Phase — CAN Capture & Native Tune Switching
+
+The next stage moves from static infotainment analysis into **vehicle-network observation**.
+
+The immediate goal is to understand how the stock Q50 infotainment system changes vehicle states, then compare that behavior with EcuTek/RaceROM map switching. The long-term research target is a native infotainment interface that can request tune-map changes without requiring a phone or Bluetooth dongle for routine switching.
+
+### Planned work
+
+- Build a passive CAN-monitoring setup using a SocketCAN-compatible USB-to-CAN interface and OBD-II breakout.
+- Capture the stock infotainment switching between Standard, Sport, and Personal modes.
+- Identify CAN IDs, bytes, and state changes that consistently correlate with those transitions.
+- Capture RaceROM map switching through the supported steering-wheel/control method.
+- Compare those captures with map changes performed through ECU Connect.
+- Determine whether ECU Connect ultimately sends normal CAN traffic, a diagnostic request, a proprietary RaceROM command, or some combination.
+- Trace the infotainment software path from the Android UI through the Linux host and vehicle services toward the CAN gateway.
+- Build a read-only proof of concept before attempting any controlled map-selection request.
+
+For the full experiment plan, hardware/software checklist, and safety boundaries, see [CAN capture & tune-switching roadmap](docs/can-tune-switching-roadmap.md).
+
 ## Want to build an app for your Q50?
 
 Start with the intentionally small [Q50 RPM test example](examples/q50-rpm-test/README.md). It demonstrates the shape of an API-10-compatible Android application based on the observed Red Sport approach:
@@ -98,6 +117,7 @@ The goal is to document the architecture and give researchers enough context to 
 ├── docs/
 │   ├── architecture.md
 │   ├── custom-app-notes.md
+│   ├── can-tune-switching-roadmap.md
 │   ├── epk-format.md
 │   ├── research-log.md
 │   └── sensor-map.md
@@ -115,6 +135,7 @@ The goal is to document the architecture and give researchers enough context to 
 - [IVI architecture](docs/architecture.md) — current platform model and open boundaries.
 - [EPK format notes](docs/epk-format.md) — observed v2 envelope, blocks, and encryption model.
 - [Custom app notes](docs/custom-app-notes.md) — reference APK compatibility and IVI metadata.
+- [CAN capture & tune-switching roadmap](docs/can-tune-switching-roadmap.md) — next-phase vehicle-network experiments and native map-switching research.
 - [Vehicle sensor map](docs/sensor-map.md) — observed sensor IDs and conversions.
 - [Research log](docs/research-log.md) — how the findings were developed and what comes next.
 - [Minimal Q50 app example](examples/q50-rpm-test/README.md) — educational source-only Android example.
